@@ -754,7 +754,9 @@
       e.target.value = v;
     });
 
-    form?.addEventListener('submit', (e) => {
+    const APPLY_ENDPOINT = 'https://s23.jung-youl.com/api/apply';
+
+    form?.addEventListener('submit', async (e) => {
       e.preventDefault();
       errEl.hidden = true; okEl.hidden = true;
       const data = new FormData(form);
@@ -773,9 +775,26 @@
       if (!out.session) return showErr('희망 회차를 선택해 주세요.');
       if (!consent) return showErr('개인정보 수집·이용에 동의해 주세요.');
 
-      // Demo: 실제 제출 엔드포인트는 본인 환경에 맞춰 연결하세요.
-      form.style.display = 'none';
-      okEl.hidden = false;
+      const btn = form.querySelector('.am-submit');
+      const originalLabel = btn.innerHTML;
+      btn.disabled = true; btn.innerHTML = '제출 중...';
+
+      // CORS 우회: no-cors 모드 + text/plain 컨텐트 타입 (preflight 없이 본문 그대로 전달)
+      // 응답은 opaque(읽을 수 없음)지만 백엔드는 데이터 수신 가능
+      try {
+        await fetch(APPLY_ENDPOINT, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+          body: JSON.stringify(out)
+        });
+        form.style.display = 'none';
+        okEl.hidden = false;
+      } catch (err) {
+        console.error('apply submit error:', err);
+        btn.disabled = false; btn.innerHTML = originalLabel;
+        showErr('제출 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+      }
     });
   })();
 </script>
